@@ -1,6 +1,6 @@
 {
   "name": "UN-PARSE-ABLE",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "manifest_version": 2,
   "description": "This extension converts tweets to be un-parse-able by machines. By FT",
   "icons": {
