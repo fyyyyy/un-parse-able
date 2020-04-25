@@ -23,24 +23,22 @@ function initPixi(doc, s, target) {
     doc.PIXI = PIXI;
 	input = target;
 
-
-	let type = "WebGL"
-	if (!PIXI.utils.isWebGLSupported()) {
-		type = "canvas"
-	}
-
-	PIXI.utils.sayHello(type);
+	// console hello
+	PIXI.utils.sayHello("canvas");
+	
+	// try improved font sharpness settings
+    PIXI.settings.PRECISION_FRAGMENT = 'highp';
+    PIXI.settings.ROUND_PIXELS = true;
 
 	//Create a Pixi Application
 	app = new PIXI.Application({
 		width: input.clientWidth,
-		height: 30,
-		antialias: true,
+		height: 20,
+		antialias: false,
 		transparent: false,
 		resolution: 1
-	});
+    });
 
-	app.view.style.color = '-internal-root-color';
 	app.view.style.width = '100%';
 	app.view.style.marginRight = 'auto';
 	app.view.style.border = '1px solid #ddd';
@@ -48,7 +46,7 @@ function initPixi(doc, s, target) {
 
 	
 	var bg = window.getComputedStyle(doc.querySelector('body')).backgroundColor;
-	app.renderer.backgroundColor = PIXI.utils.string2hex(rgb2hex(bg)); //doc.body.style.backgroundColor;
+	app.renderer.backgroundColor = PIXI.utils.string2hex(rgb2hex(bg));
 
 	input.appendChild(app.view);
 
@@ -59,62 +57,76 @@ function initPixi(doc, s, target) {
 	setInterval(update, 500);
 }
 
+/*
+	update every render cycle
+*/
 function update() {
-	if(input.innerText !== currentText) {
-		message.text = input.innerText;
-		app.view.height = message.height + offset + footer.height;
-		app.stage.height = message.height + offset + footer.height;
-		// app.view.width = message.width + 24;
-		// app.stage.width = message.width;
+    // check if input text changed
+    if (input.innerText === currentText) return;
+    
+    let showBackground = settings['store.settings.image'] === 'true';
 
-	
-		// render backgroundImage ?
-		if (settings['store.settings.image'] === "true") {
-			if (backgroundImage) {
-				app.stage.removeChild(backgroundImage);
-			}
-			var texture =  PIXI.Texture.from('https://i.picsum.photos/id/' + Math.ceil(rnd(1000)) + '/' + Math.ceil(app.view.width) + '/' + Math.ceil(app.view.height + offset) + '.jpg');
-			backgroundImage = new PIXI.Sprite(texture);
-            app.stage.addChild(backgroundImage);
-            app.stage.setChildIndex(backgroundImage, 0);
-		}
+    message.text = input.innerText;
+    app.view.height = message.height + (offset) + footer.height;
+	app.stage.height = app.view.height - (showBackground ? 0 : offset);
 
-		// render squares ?
-		if (settings['store.settings.squares'] === "true") {
-			var difference = Math.abs(input.innerText.length - currentText.length);
-			drawSquares(difference);
-		}
-		
-		currentText = input.innerText;
-		
-        // display footer on top
-        if(footer) {
-            footer.y = message.y + message.height - (offset / 2);
-            app.stage.removeChild(footer);
-            app.stage.addChild(footer);
+	// DISABLED. keep image width 100%, otherwise image will be cropped
+    // app.view.width = message.width + 24;
+    // app.stage.width = message.width;
+
+    // render backgroundImage ?
+    if (showBackground) {
+        if (backgroundImage) {
+            app.stage.removeChild(backgroundImage);
         }
+        var texture =  PIXI.Texture.from('https://i.picsum.photos/id/' + Math.ceil(rnd(1000)) + '/' + Math.ceil(app.view.width) + '/' + Math.ceil(app.view.height + offset) + '.jpg');
+        backgroundImage = new PIXI.Sprite(texture);
+        app.stage.addChild(backgroundImage);
+        app.stage.setChildIndex(backgroundImage, 0);
+    }
 
-        // display message on top
-        app.stage.removeChild(message);
-        app.stage.addChild(message);
-	}
+    // render random squares ?
+    if (settings['store.settings.squares'] === "true") {
+        var difference = Math.abs(input.innerText.length - currentText.length);
+        drawSquares(difference);
+    }
+	
+	// cache last input text
+    currentText = input.innerText;
+    
+    // display footer on top and position footer
+    if(footer) {
+        footer.y = message.y + message.height - (offset / 2);
+        app.stage.removeChild(footer);
+        app.stage.addChild(footer);
+    }
+
+    // display message on top
+    app.stage.removeChild(message);
+    app.stage.addChild(message);
 }
+
 
 function rnd(n) {
 	return Math.random() * n;
 }
 
+
+/*
+	initialize message text field
+*/
 function createMessage() {
 	var col = window.getComputedStyle(input).color;
 
 	var fontFamily = settings['store.settings.fontFamily'] || 'system-ui';
+
 	let style = new TextStyle({
-		
 		fontFamily: fontFamily,
-		fontSize: fontSize + 2,
+		fontSize: fontSize,
 		fill: col,
 		// stroke: '#ff3300',
-		// strokeThickness: 1,
+        // strokeThickness: 1,
+        resolution: 4,
 		align: 'center',
 		wordWrap: true,
 		wordWrapWidth: input.clientWidth - (offset * 2.5),
@@ -133,8 +145,12 @@ function createMessage() {
 	app.stage.addChild(message);
 }
 
+
+/*
+	initialize footer text field
+*/
 function createFooter() {
-    var text = settings['store.settings.footer'] || '– by un-parse-able extension';
+    var text = settings['store.settings.footer'] || ' un-parse-able extension ';
 	text = text.slice(1, -1);
 
 	var col = window.getComputedStyle(input).color;
@@ -142,9 +158,10 @@ function createFooter() {
 	var fontFamily = 'system-ui';
 	let style = new TextStyle({
 		fontFamily: fontFamily,
-		fontSize: fontSize -3,
+		fontSize: fontSize -5,
 		fill: col,
-		align: 'right',
+        align: 'right',
+        resolution: 4,
 		dropShadow: settings['store.settings.image'] === "true",
 		dropShadowColor: app.renderer.backgroundColor,
 		dropShadowBlur: 1,
@@ -154,7 +171,7 @@ function createFooter() {
 
 	footer = new Text(text, style);
 	footer.anchor.set(1, 0);
-	footer.x = app.view.width - offset - 2;
+	footer.x = app.view.width - offset;
 	footer.y = message.y + message.height - (offset / 2);
 	
 	if (text.length) app.stage.addChild(footer);
@@ -162,7 +179,9 @@ function createFooter() {
 
 
 
-
+/*
+	draw n random squares
+*/
 function drawSquares(n) {
 	startColor = Math.floor(0xFFFFFF * 0.8)
 	addColor = Math.floor(0xFFFFFF * 0.2)
@@ -187,6 +206,7 @@ function drawSquare(x, y, s, color) {
 	square.y = y;
 	app.stage.addChild(square);
 }
+
 
 function rgb2hex(rgb)
 {
